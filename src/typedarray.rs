@@ -69,7 +69,7 @@ pub enum CreateWith<'a, T: 'a> {
 
 /// A rooted typed array.
 pub struct TypedArray<T: TypedArrayElement> {
-    object: Heap<*mut JSObject>,
+    object: Box<Heap<*mut JSObject>>,
     computed: Option<(*mut T::Element, u32)>,
 }
 
@@ -90,8 +90,11 @@ impl<T: TypedArrayElement> TypedArray<T> {
                 return Err(());
             }
 
+            let array = Box::new(Heap::new(ptr::null_mut()));
+            array.set(unwrapped);
+
             Ok(TypedArray {
-                object: Heap::new(unwrapped),
+                object: array,
                 computed: None,
             })
         }
@@ -128,11 +131,8 @@ impl<T: TypedArrayElement> TypedArray<T> {
         slice::from_raw_parts_mut(pointer, length as usize)
     }
 
-    pub unsafe fn trace(&self, tracer: *mut JSTracer) {
-        trace!("tracing typed array");
-        CallObjectTracer(tracer,
-                         self.object.ptr.get() as *mut _,
-                         GCTraceKindToAscii(TraceKind::Object));
+    pub fn object(&self) -> &Heap<*mut JSObject> {
+        &self.object
     }
 }
 
